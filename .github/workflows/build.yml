@@ -7,6 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,15 +26,36 @@ jobs:
           npm init -y
           npm install @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8 @capacitor/app@8 @capacitor/browser@8 @capacitor-firebase/messaging@8 firebase
           mkdir www
-          echo '<html><body style="background:#090b0d"></body></html>' > www/index.html
+          cp ../intro.mp4 www/intro.mp4
+          cat > www/index.html <<'HTML'
+          <!DOCTYPE html>
+          <html><head>
+          <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+          <style>
+          html,body{margin:0;height:100%;background:#000;overflow:hidden}
+          video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+          button{position:fixed;top:36px;right:16px;z-index:2;padding:8px 16px;border:0;border-radius:20px;background:rgba(0,0,0,.55);color:#fff;font-size:15px}
+          </style></head><body>
+          <video id="v" src="intro.mp4" autoplay playsinline></video>
+          <button id="s">Passer</button>
+          <script>
+          var go=function(){location.replace('https://playkgames.floot.app')};
+          var v=document.getElementById('v');
+          v.onended=go;v.onerror=go;
+          document.getElementById('s').onclick=go;
+          var p=v.play();
+          if(p&&p.catch){p.catch(function(){v.muted=true;v.play().catch(go)})}
+          setTimeout(go,15000);
+          </script></body></html>
+          HTML
           cat > capacitor.config.json <<'EOF'
           {
             "appId": "app.floot.u300ccfd9db194dc09405b54ca1d70123",
             "appName": "PLAY K GAMES",
             "webDir": "www",
             "server": {
-              "url": "https://playkgames.floot.app",
-              "androidScheme": "https"
+              "androidScheme": "https",
+              "allowNavigation": ["playkgames.floot.app"]
             },
             "plugins": {
               "FirebaseMessaging": {
@@ -43,6 +65,11 @@ jobs:
           }
           EOF
           npx cap add android
+          mkdir -p assets
+          cp ../icon-only.png assets/icon-only.png
+          cp ../splash.png assets/splash.png
+          cp ../splash.png assets/splash-dark.png
+          npx @capacitor/assets generate --android --iconBackgroundColor '#ff1838' --splashBackgroundColor '#000000'
           printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
           npx cap sync android
